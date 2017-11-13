@@ -12,6 +12,21 @@ Each waypoint in the list contains  [x,y,s,dx,dy] values. x and y are the waypoi
 
 The highway's waypoints loop around so the frenet s value, distance along the road, goes from 0 to 6945.554.
 
+### Trajectory Generations
+The model uses points from previous waypoints where applicable and new points based on the target lanes derived from any lane changing requests from a three states finite state machine. Then the spline tool is used to generate points for the car to follow. 
+
+Three states were generated for this model:
+* Keep Lane
+* Lane Change Left
+* Lane Change Right
+
+Five different costs were calculated:
+* Distance cost: distance to the vehicle in front of the driven car
+* Speed cost: speed difference to the car in front of the driven car
+* Collision cost: a true or false indicator for determing if changing to this lane will result a collision
+* Lane Change cost: a small cost associated with changing from the current lane to prevent changes with little benefit
+* Center Lane cost: a bias towards driving in the center lane. 
+ 
 ## Basic Build Instructions
 
 1. Clone this repo.

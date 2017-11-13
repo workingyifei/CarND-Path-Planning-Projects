@@ -169,6 +169,11 @@ int main() {
   vector<double> map_waypoints_s;
   vector<double> map_waypoints_dx;
   vector<double> map_waypoints_dy;
+  // start in lane 1, leftmost lane is 0
+  int lane = 1;
+
+  // have a reference velocity to target
+  double ref_vel = 0; //mph
 
   // Waypoint map to read from
   string map_file_ = "../data/highway_map.csv";
@@ -197,8 +202,8 @@ int main() {
   	map_waypoints_dy.push_back(d_y);
   }
 
-  h.onMessage([&map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,&map_waypoints_dy](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
-                     uWS::OpCode opCode) {
+    h.onMessage([&ref_vel,&map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,&map_waypoints_dy,&lane]
+                        (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -236,18 +241,14 @@ int main() {
 					// Sensor Fusion Data, a list of all other cars on the same side of the road.
 					auto sensor_fusion = j[1]["sensor_fusion"];
 
-          // start in lane 1, leftmost lane is 0
-          int lane = 1;
 
-          // have a reference velocity to target
-          double ref_vel = 49.6; //mph
 
           // avoid front collision
           if (prev_size > 0) {
             car_s = end_path_s;
           }
 
-          bool tool_close = false;
+          bool too_close = false;
 
           // find rev_v to use
           for (int i = 0; i < sensor_fusion.size(); ++i) {
@@ -263,12 +264,19 @@ int main() {
               if ((check_car_s > car_s) && (check_car_s-car_s) < 30) {
                 // do some logic here
                 //lower the car speed
-                ref_vel = 29.5; //mph
+//                ref_vel = 29.5; //mph
+                too_close = true;
               }
-
             }
-
           }
+
+          if (too_close) {
+            ref_vel -= .224;
+          }
+          else if (ref_vel < 49.5) {
+            ref_vel += .224;
+          }
+
 
 					// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
 
@@ -382,7 +390,7 @@ int main() {
 
 						next_x_vals.push_back(x_point);
 						next_y_vals.push_back(y_point);
-					}
+          }
 					// END\
 					
 					json msgJson;
@@ -397,7 +405,7 @@ int main() {
         }
       }
 
-			else {
+      else {
         // Manual driving
         std::string msg = "42[\"manual\",{}]";
         ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
